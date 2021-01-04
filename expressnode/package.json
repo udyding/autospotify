@@ -1,0 +1,14 @@
+{
+  "name": "expressnode",
+  "version": "1.0.0",
+  "description": "spotify refresher",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app"
+  },
+  "author": "Fion",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}

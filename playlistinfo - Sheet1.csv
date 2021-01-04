@@ -1,0 +1,5 @@
+seed_track,seed_artist,date_added,is_original,is_archived,is_current,numofdays,UserID
+a,justin,September 3 2002,TRUE,TRUE,FALSE,0,fion123
+b,ariana,September 4 2002,FALSE,FALSE,TRUE,0,fion123
+c,post malone,September 5 2002,TRUE,FALSE,TRUE,0,fion123
+d,gucci mane,September 6 2002,FALSE,TRUE,FALSE,0,fion123
