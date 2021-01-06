@@ -9,6 +9,7 @@ const axios = require('axios');
 const { addSongsFirst } = require('./functions')
 const { getGenres } = require('./functions')
 const { nextFive } = require('./functions')
+const { getplaylist } = require('./functions')
 
 const client_id = '4ce841afde514e288a7cd3d3bb26e749'; // Your client id
 const client_secret = '6b5ae954b2c24afaaef722f0a6b1c323'; // Your secret
@@ -145,9 +146,9 @@ app.get('/refresh_token', function(req, res) {
 
 app.get('/test', async (req, res) => {
     const {accessToken} = req.query;
-    const data = await addSongsFirst('2ClPpXi48pLysp4UiQvltz', accessToken);
+    //const data = await addSongsFirst('2ClPpXi48pLysp4UiQvltz', accessToken);
     //await nextFive('655OjsI6LbHdo3565qEfbE', ['scorecore', 'soundtrack'], ['0Xk15jHKly4c3AhPr5vjoA'], accessToken);
-
+    const data = await getplaylist("22zxbnekkwhg7dyhbdrdnmwai", accessToken);
     res.send(data)
 })
 

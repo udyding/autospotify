@@ -3,8 +3,11 @@ const { access } = require('fs');
 const moment = require('moment');
 const schedule = require('node-schedule');
 const { get } = require('request');
+const { MongoClient, Db } = require('mongodb');
 
 let dateFormat = "YYYY-M-D"
+const uri = "mongodb+srv://doraemon:Fion2002@cluster0.kssuc.mongodb.net/myspotify?authSource=admin&replicaSet=atlas-nimc8j-shard-0&w=majority&readPreference=primary&appname=MongoDB%20Compass&retryWrites=true&ssl=true";
+const client = new MongoClient(uri);
 
 function main(playlist, limit) { // have to connect this with all playlists all at midnight
     checkSongs(playlist, limit); // init check
@@ -71,25 +74,86 @@ async function addSongsFirst(playlist_id, access_token) {
 
 
 // checks songs routinely for dates since added
-async function checkSongs(playlist_id, limit, access_token) {
-    let songsAndInfo = addSongsFirst(playlist_id);
-    for (i = 0; i < songsAndInfo.length; i++) {
-        let dateAdded = songsAndInfo[i].date_added;
+async function checkPlaylistSongs(playlistId, limit, access_token) {
+    let cursor = await client.db("Playlists").collection("playlist").find({ playlist_id: playlistId});
+    let songs = cursor.toArray().songs; // get all songs first and their info, in an array
+    let songsIds = [];
+    for (k = 0; k < songs.length; k++) {
+        songsIds.push(songs[i].song_id);
+    }
+
+    for (i = 0; i < songs.length; i++) {
+        existingSongs.push(songs[i].song_id); // keeps track of songs
+        let dateAdded = songs[i].date_added;
         let diffInDays = moment().diff(moment(dateAdded, dateFormat), 'days');
         if (diffInDays > limit) {
-            songsAndInfo[i].is_archived = true;
-            let top_five = songsAndInfo[i].top_five;
-            //for (j = 0; j < 5; j++) {
-                // IF THIS TRACK IS ALREADY IN THE DATABASE, GO ON TO NEXT ONE
-                // UNTIL IT IS NOT IN THE PLAYLIST
-                // IF TOP FIVE ARE ALL ALREADY IN PLAYLIST, JUST KEEP THE SONG
-                // IF NOT IN PLAYLIST, ADD TO DATABASE WITH SAME FORMAT OF SONG AS ABOVE
-                // BUT IS_ORIGINAL IS FALSE
-            //}
+            songs[i].is_archived = true;
+            let top_five = songs[i].top_five;
+
+            let foundSong = top_five.find(element => songsIds.includes(element)); // should prob account for if its not in the playlist
+
+            let foundSongInfo = findNewSongInfo(foundSong, access_token);
+            const result = await client.db("Playlists").collection("playlist").insertOne(foundSongInfo);
+            console.log(foundSongInfo);
+            try { // posts the recommended song to the playlist
+                const response = await axios({
+                    method: "post",
+                    url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks?uris=spotify%3Atrack%3A${foundSongInfo.id}`,
+                    headers: {
+                        Authorization: `Bearer ${access_token}`
+                    }});    
+            } catch (err) {
+                console.log(err.response);
+            }
         }
-    console.log(songsAndInfo);
     }
 }
+
+// adds a new recommended song to the playlist
+async function findNewSongInfo(song_id, access_token) {
+    try {
+        const response = await axios({
+            method: "get",
+            url: `https://api.spotify.com/v1/tracks/${song_id}`,
+            headers: {
+                Authorization: `Bearer ${access_token}`
+            }});
+        let songInfo = response.data;
+        let artistsItems = songInfo.artists; 
+        let artistsId = [];
+        for (let j = 0; j < artistsItems.length; j++) {
+            artistsId.push(artistsItems[j].id);
+        }
+        let seedGenres = await getGenres(artistsId, access_token);
+        let firstGenresString = '';
+        if (seedGenres.length == 0) {
+            firstGenresString = 'none';
+        } else {
+            firstGenresString = seedGenres[0].toString();
+        }
+
+        let seedTrack = song_id;
+        let seedArtists = artistsId;
+        let firstArtistString = artistsId[0].toString();
+        let topFive = await nextFive(seedTrack, firstGenresString, firstArtistString, access_token);
+
+        let song = {
+            date_added: (items[i].added_at.split("T"))[0],
+            song_id: seedTrack, // this is also the seed_tracks
+            seed_artists: seedArtists, // all seeds are in string form
+            seed_genres: seedGenres, // this causes the program to run slower
+            is_original: false, // this is false compared to an original song
+            is_archived: false,
+            top_five: topFive
+        }; // similar to the addSongsFirst function
+
+        const result = await client.db("Playlists").collection("playlist").insertOne(song);
+        return song;
+    } catch (err) {
+        console.log(err.response);
+    }
+}
+
 
 
 // get the genres of an array of artists for seed_artists
@@ -170,27 +234,43 @@ async function nextFive(seedTracks, seedGenres, seedArtists, access_token) {
 }
 
 
-// when playlist is no longer tracked MODIFY THIS WITH DATABASE CONNECTION
-function turnOff(playlist, userRequest) {
-    let songs = playlist.songs;
-    let numberOfSongs = songs.length;
-    let turnOffSongs = [];
-
-    if (userRequest == 'allSongs') {
-        console.log(songs)
-    }
-    else if (userRequest == 'originalSongs') {
-        for (let i = 0; i < numberOfSongs; i++) {
-            if (songs[i].isOriginal == true) {
-                turnOffSongs.push(songs[i]);
-            }
-        }
-    }
-    console.log(turnOffSongs)
+// when playlist is no longer tracked 
+function turnOff(playlistId, userRequest) {
+    // simply turns off the tracking on the playlist
+    const result = client.db("Playlists").collection("playlist").updateOne(
+        { playlist_id: playlistId },
+        { $set: { "on_off": false }});
 }
+
+async function getplaylist(user_id, access_token) {
+    try {
+        const response = await axios({
+            method: "get" ,
+            url: `https://api.spotify.com/v1/users/${user_id}/playlists`,
+            headers: {
+                Authorization: `Bearer ${access_token}`
+            }
+        })
+        let info = response.data.items;
+        let playlists = []
+        for (let i = 0; i < info.length;i++) {
+            let playlist = {
+                playlist_id: info[i].id,
+                user_id: user_id
+            }
+            playlists.push(playlist)
+        }
+        console.log(playlists);
+        return playlists;
+        
+    } catch (err) {
+        console.log(err.response)
+    }
+};
 
 module.exports = {
     addSongsFirst,
     getGenres,
     nextFive,
+    getplaylist,
 }
