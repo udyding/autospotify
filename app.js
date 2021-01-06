@@ -1,4 +1,4 @@
-
+require('dotenv').config();
 const express = require('express'); // Express web server framework
 const request = require('request'); // "Request" library
 const cors = require('cors');
@@ -11,9 +11,9 @@ const { getGenres } = require('./functions')
 const { nextFive } = require('./functions')
 const { getplaylist } = require('./functions')
 
-const client_id = '4ce841afde514e288a7cd3d3bb26e749'; // Your client id
-const client_secret = '6b5ae954b2c24afaaef722f0a6b1c323'; // Your secret
-const redirect_uri = 'http://localhost:8888/callback'; // Your redirect uri
+const client_id = CLIENT_ID; // Your client id
+const client_secret = CLIENT_SECRET; // Your secret
+const redirect_uri = HOST; // Your redirect uri
 
 /**
  * Generates a random string containing numbers and letters
