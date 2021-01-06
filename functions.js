@@ -233,6 +233,29 @@ async function nextFive(seedTracks, seedGenres, seedArtists, access_token) {
 };
 }
 
+async function playlistsOn(client) {
+    playlistIdArray = await client
+      .db("Playlists")
+      .collection("playlist")
+      .find(
+        { on_off: true },
+        {
+          fields: {
+            _id: 0,
+            playlist_id: 1,
+          },
+        }
+      )
+      .toArray();
+  
+    let playlistIds = [];
+  
+    for (i = 0; i < playlistIdArray.length; i++) {
+      playlistIds.push(playlistIdArray[i].playlist_id);
+    }
+  
+    return playlistIds;
+  }
 
 // when playlist is no longer tracked 
 function turnOff(playlistId, userRequest) {
@@ -242,31 +265,7 @@ function turnOff(playlistId, userRequest) {
         { $set: { "on_off": false }});
 }
 
-async function getplaylist(user_id, access_token) {
-    try {
-        const response = await axios({
-            method: "get" ,
-            url: `https://api.spotify.com/v1/users/${user_id}/playlists`,
-            headers: {
-                Authorization: `Bearer ${access_token}`
-            }
-        })
-        let info = response.data.items;
-        let playlists = []
-        for (let i = 0; i < info.length;i++) {
-            let playlist = {
-                playlist_id: info[i].id,
-                user_id: user_id
-            }
-            playlists.push(playlist)
-        }
-        console.log(playlists);
-        return playlists;
-        
-    } catch (err) {
-        console.log(err.response)
-    }
-};
+
 
 module.exports = {
     addSongsFirst,
