@@ -5,21 +5,53 @@ const schedule = require('node-schedule');
 const { get } = require('request');
 const { MongoClient, Db } = require('mongodb');
 
-let dateFormat = "YYYY-M-D"
-const uri = "mongodb+srv://doraemon:Fion2002@cluster0.kssuc.mongodb.net/myspotify?authSource=admin&replicaSet=atlas-nimc8j-shard-0&w=majority&readPreference=primary&appname=MongoDB%20Compass&retryWrites=true&ssl=true";
-const client = new MongoClient(uri);
 
-function main(playlist, limit) { // have to connect this with all playlists all at midnight
-    checkSongs(playlist, limit); // init check
-    let dailyCheck = schedule.scheduleJob({hour: 00, minute: 00}, function() {
-        checkSongs(playlist, limit);
-    });
-}
+async function main() {
+    const uri =
+      "mongodb+srv://doraemon:Fion2002@cluster0.kssuc.mongodb.net/myspotify?authSource=admin&replicaSet=atlas-nimc8j-shard-0&w=majority&readPreference=primary&appname=MongoDB%20Compass&retryWrites=true&ssl=true";
+  
+    const client = new MongoClient(uri);
+  
+    try {
+      await client.connect();
+  
+      await addId(
+        client,
+        await findId(
+          "BQCIv9xu8JkbY1ko-Kry2x97fvdee1fO4RJN4XFvWKF7UisGJsK6evEas7AmcOCxM4kQ33ZabOZn5QdsStsYnLpfvi4npa_ISqXf0K6meN7Zvpbza0E7Rl0Nv-_hZQTBWu-WA7Aj7JiF-sbe333MldYeLhhOZPrVYV-nPUuwZoUAopBhN9fii4YP6ZKpIvicJx-8TN7OwkLW8nKGbOhAE0LJK-Ci3VhpV070ybyWcujqj8YPyAakujE3KwDsYg_IUBwuLqZELz7A"
+        ) // CHANGE THE ABOVE ACCESS TOKEN TO THE ONE RECEIVED FROM THE APP.JS FILE
+      );
+    } catch (e) {
+      console.error(e);
+    } finally {
+      await client.close();
+    }
+  }
 
 /* $('a').click(function() { REPLACE THIS WITH THE INPUT FROM FRONT END TO STOP TRACKING
     clearInterval(i);
     turnOff(playlist, userRequest); INPUT FROM FRONT END SHOULD COME WITH USER REQUEST
 }) */
+
+// adding new userID's to the mongodb database
+async function addId(client, newUserid) {
+    result = await client
+      .db("Playlists")
+      .collection("Users")
+      .find({ user_id: newUserid })
+      .toArray();
+  
+    if (result.length === 0) {
+      client
+        .db("Playlists")
+        .collection("Users")
+        .insertOne({ user_id: newUserid });
+      console.log("Added new user ID");
+    } else {
+      console.log("User ID is already in the database");
+    }
+}
+
 
 // creates the initial playlist with all the song info
 async function addSongsFirst(playlist_id, access_token) {
@@ -255,7 +287,24 @@ async function playlistsOn(client) {
     }
   
     return playlistIds;
-  }
+}
+
+
+async function findId(access_token) {
+    try {
+        const response = await axios({
+        method: "get",
+        url: `https://api.spotify.com/v1/me`,
+        headers: {
+            Authorization: `Bearer ${access_token}`,
+        },
+    });
+    return response.data.id;
+} catch (err) {
+    console.log(err.response);
+}
+}
+
 
 // when playlist is no longer tracked 
 function turnOff(playlistId, userRequest) {
