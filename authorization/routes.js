@@ -17,8 +17,6 @@ const client_secret = process.env.CLIENT_SECRET;
 const redirect_uri = process.env.HOST;
 
 router.get("/login", (req, res) => {
-  const { userType, playlistID = null } = req.query;
-
   let authURL = `https://accounts.spotify.com/authorize?response_type=code&client_id=${client_id}`;
   authURL += `&scope=${encodeURIComponent(scope)}`;
   authURL += `&redirect_uri=${encodeURIComponent(loggedInURL)}`;
@@ -28,7 +26,7 @@ router.get("/login", (req, res) => {
 
 router.get("/loggedin", async (req, res) => {
   try {
-    const { code: authCode, error, state } = req.query;
+    const { code: authCode, error } = req.query;
 
     if (error) {
       res.redirect(frontendURL);
