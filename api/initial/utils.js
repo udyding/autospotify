@@ -1,8 +1,5 @@
 const {MongoClient} = require('mongodb');
 const axios = require('axios')
-const { getGenres } = require('./functions');
-const { nextFive } = require('./functions');
-const { addSongsFirst } = require('./functions');
 
 let playlist_id = "2E0IzZ6x9oLvN0sBNbHUxd"
 let access_token = "BQA0kiEFjsnpG7a81e4kKaRszbltx7yyhZ6tzsa4ekwq2-zfCLhhrpzDj4AbCtxnKboeZlvZTrnJJSzQCsEdB5YIdlMcdUdSBi0BeWTc3Qm24h58ZRNydh53zQbUTpUtgH-A_YMeNreylCkci64rAtJ-GWk4khsb_DAVsMgrLFYpwQAvaI-sPsaH1XgbNpQkIWA98JSS326sOVKiEaUTnTgufdhloE0Zsg"
@@ -11,7 +8,7 @@ let access_token = "BQA0kiEFjsnpG7a81e4kKaRszbltx7yyhZ6tzsa4ekwq2-zfCLhhrpzDj4Ab
 async function main(){
 
     const uri = "mongodb+srv://doraemon:Fion2002@cluster0.kssuc.mongodb.net/myspotify?authSource=admin&replicaSet=atlas-nimc8j-shard-0&w=majority&readPreference=primary&appname=MongoDB%20Compass&retryWrites=true&ssl=true";
-    let duplicateid = createNewPlaylist(user_id, access_token)
+    let duplicateId = createNewPlaylist(user_id, access_token)
     const client = new MongoClient(uri);
 
       try {
@@ -91,10 +88,10 @@ async function createNewPlaylist(user_id, access_token) {
 }
 
 
-async function returnOriginalTracks(playlistid, access_token) {
+async function returnOriginalTracks(duplicateId, access_token) {
     try {
         const response = await axios({
-            method: "POST" ,
+            method: "POST",
             url: ` 	https://api.spotify.com/v1/playlists/${playlistid}/tracks`,
             uris: alluris,
             headers: {

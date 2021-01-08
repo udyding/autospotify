@@ -1,7 +1,6 @@
 const express = require('express');
 const { access } = require('fs');
 const { send } = require('process');
-const { getToken } = require('../auth/utils')
 const { getGenres, topFive } = require('../initial/utils');
 const { playlistsOn, checkPlaylistSongs, findNewSongInfo } = require('./utils');
 

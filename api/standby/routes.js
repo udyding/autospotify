@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { getPlaylist, createMultiplePlaylists } = require(".utils");
+const { getPlaylist, createMultiplePlaylists } = require("./utils");
 
 router.get("/getPlaylist", async (req, res) => {
   try {
