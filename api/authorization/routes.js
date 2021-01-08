@@ -7,8 +7,8 @@ const { getTokens, findId } = require(".utils");
 const scope =
   "user-read-private user-read-email playlist-modify-public playlist-modify-private playlist-read-private playlist-read-collaborative";
 
-const frontendURL = "http://localhost:8080";
-const backendURL = "http://localhost:8888";
+const frontendURL = "http://localhost:8888";
+const backendURL = "http://localhost:3000";
 const loggedInURL = `${backendURL}/auth/loggedin`;
 const authenticatedURL = `${frontendURL}/redirectAfterLogin`;
 
