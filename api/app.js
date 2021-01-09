@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require('express');
 const bodyParser = require('body-parser')
 
@@ -7,7 +8,7 @@ const PORT = process.env.PORT || 8888;
 const auth = require('./authorization/routes');
 //const daily = require('./daily/routes');
 //const initial = require('./initial/routes');
-const standby = require('./standby/routes');
+const standby = require('./initial/routes');
 
 const router = express.Router();
 // third party middleware
@@ -20,7 +21,7 @@ app.get('/', (req, res) => {
 
 //router.post()
 app.use('/auth', auth)
-app.use('/standby', standby)
+//app.use('/standby', standby)
 // app.use('/initial', initial)
 // app.use('/daily', daily)
 // add in the turn off function

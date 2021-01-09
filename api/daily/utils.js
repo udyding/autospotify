@@ -1,8 +1,8 @@
 const axios = require('axios');
 const { MongoClient, Db } = require('mongodb');
 
-const { getGenres } = require('../initial/utils');
-const { nextFive } = require('../initial/utils');
+const { getGenres } = require('../turnOn/utils');
+const { nextFive } = require('../turnOn/utils');
 
 async function main() {
     const uri =

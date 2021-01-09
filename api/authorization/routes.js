@@ -35,10 +35,11 @@ router.get("/loggedin", async (req, res) => {
       return;
     }
 
-    const accessToken = await getTokens(authCode);
-    const userID = await findId(accessToken);
+    const tokenData = await getTokens(authCode);
+    const { access_token: accessToken, refresh_token: refreshToken } = tokenData;
+    const userId = checkUser(accessToken);
 
-    res.redirect(`${authenticatedURL}/${userID}`);
+    res.redirect(`${authenticatedURL}/${userId}`);
   } catch (err) {
     res.status(400).send(err);
   }

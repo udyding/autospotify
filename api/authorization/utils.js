@@ -1,29 +1,16 @@
+require("dotenv").config({path: __dirname+'/./../../.env'});
 const axios = require("axios");
 const qs = require("qs");
 
 const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
-const redirect_uri = process.env.HOST;
+const redirect_uri = 'http://localhost:8888/auth/loggedin'
 
 const { MongoClient } = require("mongodb");
 
-const uri =
-  "mongodb+srv://doraemon:Fion2002@cluster0.kssuc.mongodb.net/myspotify?authSource=admin&replicaSet=atlas-nimc8j-shard-0&w=majority&readPreference=primary&appname=MongoDB%20Compass&retryWrites=true&ssl=true";
 
-const client = new MongoClient(uri);
-
-async function putIdInDatabase(authCode) {
-  try {
-    await client.connect();
-    await addId(client, await findId(authCode));
-  } catch (e) {
-    console.error(e);
-  } finally {
-    await client.close();
-  }
-}
-
-async function findId(access_token) {
+// checks if the user has logged in before or not
+async function checkUser(access_token) {
   try {
     const response = await axios({
       method: "get",
@@ -32,35 +19,36 @@ async function findId(access_token) {
         Authorization: `Bearer ${access_token}`,
       },
     });
-    return response.data.id;
+    let userId = response.data.id;
   } catch (err) {
     console.log(err.response);
   }
-}
+  
+  const uri =
+  "mongodb+srv://doraemon:Fion2002@cluster0.kssuc.mongodb.net/myspotify?authSource=admin&replicaSet=atlas-nimc8j-shard-0&w=majority&readPreference=primary&appname=MongoDB%20Compass&retryWrites=true&ssl=true";
 
-// adding new userID's to the mongodb database
-async function addId(client, newUserId) {
-  result = await client
+  const client = new MongoClient(uri);
+
+  let result = await client
     .db("Playlists")
     .collection("Users")
-    .find({ user_id: newUserId })
+    .find({ user_id: userId })
     .toArray();
 
   if (result.length === 0) {
     client
       .db("Playlists")
       .collection("Users")
-      .insertOne({ user_id: newUserId });
-    console.log("Added new user ID");
-    return true;
-  } else {
-    console.log("User ID is already in the database");
-    return true;
+      .insertOne({ user_id: userId });
   }
+  return userId;
+
 }
 
+// returns the access and refresh tokens given an authCode
 async function getTokens(authCode) {
-  const response = await axios({
+  try {
+    const response = await axios({
     method: "POST",
     url: "https://accounts.spotify.com/api/token",
     data: qs.stringify({
@@ -72,6 +60,17 @@ async function getTokens(authCode) {
     }),
     headers: { "content-type": "application/x-www-form-urlencoded" },
   });
-  console.log(response.data);
-  return response.data;
+    console.log(response.data);
+    return response.data;
+  } catch (err) {
+    console.log(err.response)
+  }
 }
+
+getTokens('AQAYmoE4ezq-_YUE5rU6iWelCPLLsVDQp6feOUOQ4F4iWimq4swpDJ1Xbt2KbZsEuNsGDnMofi6trLZK6x1PwJn0UxYD0jhYXxS1oUC1TERjL6KR7sIrB0gFUFRS9af6srUORiBIb-xmppKTIaz1CGA563fGjoPKbPA39cSU-KVnGCntcJqaJxPrKJxhsskuW6mo-6FEhOEtxXTotUvHCJxjXb6GLHM_29-cPoJrq13IT2lo2aClJfN-FVa9hf0XdtqgSwtUV7rJMRieW4-WDnDO2rczB8ueDQe0c-02UCioFsSS2yTJmZEZg58NdKBkgKy0L5SrQeJkFpQmrQj0qMEnz1AIeU802d7uWTYcHrw')
+
+module.exports = {
+  checkUser, 
+  getTokens,
+
+};

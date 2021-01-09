@@ -1,7 +1,7 @@
 const express = require('express');
 const { access } = require('fs');
 const { send } = require('process');
-const { getGenres, topFive } = require('../initial/utils');
+const { getGenres, topFive } = require('../turnOn/utils');
 const { playlistsOn, checkPlaylistSongs, findNewSongInfo } = require('./utils');
 
 // get instance of router
