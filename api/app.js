@@ -1,15 +1,17 @@
-require("dotenv").config();
 const express = require('express');
 const bodyParser = require('body-parser')
-const { MongoClient } = require("mongodb")
+const { DATABASE_URI } = require('./config')
 
 const app = express();
 const PORT = process.env.PORT || 8888;
 
+let client = require('./db');
+
 const auth = require('./authorization/routes');
-//const daily = require('./daily/routes');
-//const initial = require('./initial/routes');
-const standby = require('./initial/routes');
+const daily = require('./daily/routes');
+const initial = require('./initial/routes');
+const turnOn = require('./turnOn/routes');
+const turnOff = require('./turnOff/routes')
 
 const router = express.Router();
 // third party middleware
@@ -20,55 +22,53 @@ app.get('/', (req, res) => {
     res.status(200).send('Connected to app.')
 })
 
-//router.post()
 app.use('/auth', auth)
-//app.use('/standby', standby)
-// app.use('/initial', initial)
-// app.use('/daily', daily)
-// add in the turn off function
+app.use('/initial', initial)
+app.use('/turnOn', turnOn)
+app.use('/daily', daily)
+app.use('/turnOff', turnOff)
 
 
-app.listen(PORT);
-console.log('Listening on http://localhost:' + PORT)
-
-MongoClient.connect("mongodb+srv://doraemon:Fion2002@cluster0.kssuc.mongodb.net/myspotify?authSource=admin&replicaSet=atlas-nimc8j-shard-0&w=majority&readPreference=primary&appname=MongoDB%20Compass&retryWrites=true&ssl=true",
-{useNewUrlParser: true})
-.then(client => {
-const db = client.db('Playlist');
-const collection = db.collection('playlists');
-app.locals.collection = collection;
-app.listen(port, () => console.info(`API running on port ${port}`));
-
-}).catch (error => console.error(error));
-
-//addSongsFirst
-app.get('/addSongsFirst', (req, res) => {
-    const firstaddedsongs = addSongsFirst(playlistID, access_token)
-    res.status(200).send(firstaddedsongs)
+// connect to the database
+client.connect(DATABASE_URI, (err) => {
+    if (err) {
+        console.log('Unable to connect to Mongo.');
+        process.exit(1);
+    } else {
+        app.listen(PORT, () => {
+            console.log('Listening on http://localhost:' + PORT);
+        });
+    }
 });
 
+// //addSongsFirst
+// app.get('/addSongsFirst', (req, res) => {
+//     const firstaddedsongs = addSongsFirst(playlistID, access_token)
+//     res.status(200).send(firstaddedsongs)
+// });
+
 //playlistsOn
-app.get('/playlistsOn', (req, res) => {
-    const onPlaylists = playlistsOn(access_token)
-    res.status(200).send(onPlaylists)
+// app.get('/playlistsOn', (req, res) => {
+//     const onPlaylists = playlistsOn(access_token)
+//     res.status(200).send(onPlaylists)
 
-//checkPlaylistSongs
-app.get('/checkPlaylistSongs', (req, res) => {
-    const checkPlaylists = checkPlaylistSongs(playlistId, access_token)
-    res.status(200).send(checkPlaylists)
+// //checkPlaylistSongs
+// app.get('/checkPlaylistSongs', (req, res) => {
+//     const checkPlaylists = checkPlaylistSongs(playlistId, access_token)
+//     res.status(200).send(checkPlaylists)
 
-//findNewSongInfo
-app.get('/findNewSongInfo', (req, res) => {
-    const songInfo = findNewSongInfo(songID, access_token)
-    res.status(200).send(songInfo)
+// //findNewSongInfo
+// app.get('/findNewSongInfo', (req, res) => {
+//     const songInfo = findNewSongInfo(songID, access_token)
+//     res.status(200).send(songInfo)
 
-//updateSongs
-app.get('/updateSongs', (req, res) => {
-    const updatedSongs = updateSongs(playlistID, access_token)
-    res.status(200).send(updatedSongs)
+// //updateSongs
+// app.get('/updateSongs', (req, res) => {
+//     const updatedSongs = updateSongs(playlistID, access_token)
+//     res.status(200).send(updatedSongs)
 
-//createMultiplePlaylists
-app.get('/createMultiplePlaylists', (req, res) => {
-    const MultiplePlaylists = createMultiplePlaylists()
-    res.status(200).send(MultiplePlaylists)
-}
+// //createMultiplePlaylists
+// app.get('/createMultiplePlaylists', (req, res) => {
+//     const MultiplePlaylists = createMultiplePlaylists()
+//     res.status(200).send(MultiplePlaylists)
+//}

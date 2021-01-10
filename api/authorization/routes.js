@@ -1,24 +1,18 @@
-require("dotenv").config();
 const express = require("express");
 const router = express.Router();
+const { FRONTEND_URL, BACKEND_URL, CLIENT_ID, CLIENT_SECRET } = require('../config')
 
-const { getTokens, findId } = require("./utils");
+const { getTokens, checkUser } = require("./utils");
 
 const scope =
   "user-read-private user-read-email playlist-modify-public playlist-modify-private playlist-read-private playlist-read-collaborative";
 
-const frontendURL = "http://localhost:3000";
-const backendURL = "http://localhost:8888";
-const loggedInURL = `${backendURL}/auth/loggedin`;
-const authenticatedURL = `${frontendURL}/redirectAfterLogin`;
-
-const client_id = '4ce841afde514e288a7cd3d3bb26e749';
-const client_secret = process.env.CLIENT_SECRET;
-const redirect_uri = 'http://localhost:8888/callback';
+const loggedInURL = `${BACKEND_URL}/auth/loggedin`;
+const authenticatedURL = `${FRONTEND_URL}/redirectAfterLogin`;
 
 // upon login redirects you into a logged in page
 router.get("/login", (req, res) => {
-  let authURL = `https://accounts.spotify.com/authorize?response_type=code&client_id=${client_id}`;
+  let authURL = `https://accounts.spotify.com/authorize?response_type=code&client_id=${CLIENT_ID}`;
   authURL += `&scope=${encodeURIComponent(scope)}`;
   authURL += `&redirect_uri=${encodeURIComponent(loggedInURL)}`;
 
@@ -37,9 +31,10 @@ router.get("/loggedin", async (req, res) => {
 
     const tokenData = await getTokens(authCode);
     const { access_token: accessToken, refresh_token: refreshToken } = tokenData;
-    const userId = checkUser(accessToken);
-
-    res.redirect(`${authenticatedURL}/${userId}`);
+    const user = await checkUser(accessToken);
+    res.status(200).send(user) // havent done front end yet
+    //res.redirect(`${authenticatedURL}/${userId}`);
+    
   } catch (err) {
     res.status(400).send(err);
   }

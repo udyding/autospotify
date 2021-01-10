@@ -1,117 +1,106 @@
-const {MongoClient} = require('mongodb');
 const axios = require('axios')
-
-let playlist_id = "2E0IzZ6x9oLvN0sBNbHUxd"
-let access_token = "BQA0kiEFjsnpG7a81e4kKaRszbltx7yyhZ6tzsa4ekwq2-zfCLhhrpzDj4AbCtxnKboeZlvZTrnJJSzQCsEdB5YIdlMcdUdSBi0BeWTc3Qm24h58ZRNydh53zQbUTpUtgH-A_YMeNreylCkci64rAtJ-GWk4khsb_DAVsMgrLFYpwQAvaI-sPsaH1XgbNpQkIWA98JSS326sOVKiEaUTnTgufdhloE0Zsg"
+let client = require('../db')
 
 
-async function main(){
-
-    const uri = "mongodb+srv://doraemon:Fion2002@cluster0.kssuc.mongodb.net/myspotify?authSource=admin&replicaSet=atlas-nimc8j-shard-0&w=majority&readPreference=primary&appname=MongoDB%20Compass&retryWrites=true&ssl=true";
-    let duplicateId = createNewPlaylist(user_id, access_token)
-    const client = new MongoClient(uri);
-
-      try {
-          // Connect to the MongoDB cluster
-          await client.connect();
-   
-          // Make the appropriate DB calls
-          await updateSongs(client, playlist_id, addedsongs);
-          await returnOriginalTracks(client, playlist_id, access_token) 
-  
-   
-      } catch (e) {
-          console.error(e);
-      } finally {
-          await client.close();
-      }
-  }
-  
-  main().catch(console.error);
-
-  
-  async function updateSongs(client, playlistval) {
-    const addedsongs = await addSongsFirst(playlist_id, access_token)
-    result = await client.db("Playlists").collection("playlist")
-                        .updateMany({ playlist_id: playlistval }, { $set: { 
-                            on_off: true, 
-                            songs: addedsongs }});
-
-    console.log(`${result.matchedCount} document(s) matched the query criteria.`);
-    console.log(`${result.modifiedCount} document(s) was/were updated.`); 
-}
-
-//get uris of all songs in the original playlist
-async function getUris(playlist_id, access_token) {
+// this main function duplicates the playlist and adds all songs into the database
+async function setUpPlaylist(userId, playlistId, limit, access_token) {
     try {
+        // add all songs from playlist into the database first
+        const addedSongs = await addSongsFirst(playlistId, access_token);
+        let result = await client.db("Playlists").collection("playlist")
+                        .updateMany({ playlist_id: playlistId }, { $set: { 
+                            on_off: true,
+                            limit: limit,
+                            songs: addedSongs        
+                            }}); 
+        
+        // now create a duplicate of the playlist for the user. note: this duplicate will not be added to database
+        let playlistName = (await client.db("Playlists").collection("playlist")
+            .find({ playlist_id: playlistId }, { fields: { _id: 0, playlist_name: 1 }}).toArray())[0].playlist_name
+        await createNewPlaylist(userId, playlistId, playlistName, access_token)
+        console.log(addedSongs)
+        return playlistId;
+    } catch (e) {
+        console.error(e);
+    } finally {
+        await client.close();
+    }
+    }
+
+
+// duplicates the playlist that has just been turned on
+async function createNewPlaylist(userId, playlistId, playlistName, access_token) {
+    try {
+        // first create an empty playlist
         const response = await axios({
-            method: "get" ,
-            url: `https://api.spotify.com/v1/playlists/${playlist_id}/tracks`,
+            method: "POST" ,
+            url: ` https://api.spotify.com/v1/users/${userId}/playlists`,
+            data: {
+                name: playlistName + 'original'
+            }, 
             headers: {
                 Authorization: `Bearer ${access_token}`
             }
         })
-        let info = response.data.items
-        for (let i = 0; i < info.length;i++) {
-            let uris = info[i].track.uri
-            console.log(uris)
-        }        
-        
+        let newPlaylistId = response.data.id;
+        let songUris = await getUris(playlistId, access_token);
+
+        // add all the songs into the duplicate of the original playlist on spotify
+        await addOriginalTracks(newPlaylistId, songUris, access_token);
+        return newPlaylistId;
     } catch (err) {
         console.log(err.response)
     }
-}
 
-let alluris = getUris(playlist_id, access_token)
+}  
 
-//creates a new playlist named duplicate and returns the playlist id
-async function createNewPlaylist(user_id, access_token) {
+
+//get uris of all songs in the original playlist
+async function getUris(playlistId, access_token) {
     try {
         const response = await axios({
-            method: "POST" ,
-            url: ` https://api.spotify.com/v1/users/${user_id}/playlists`,
-            data: {
-                name: "duplicate"
-            }, 
+            method: "get" ,
+            url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks?market=CA&fields=items(track(uri))`,
             headers: {
-                Authorization: `Bearer ${access_token}`,
-                "Content-type": "application.json"
+                Authorization: `Bearer ${access_token}`
             }
         })
-        let playlistid = response.data.id
-        return playlistid  
+        let info = response.data.items;
+        let allUris = [];
+        for (let i = 0; i < info.length; i++) {
+            let songUri = info[i].track.uri;
+            allUris.push(songUri);
+        }        
+        return allUris;
         
     } catch (err) {
         console.log(err.response)
     }
-
 }
 
 
-async function returnOriginalTracks(duplicateId, access_token) {
+async function addOriginalTracks(duplicateId, allUris, access_token) {
     try {
+        let uriInput = encodeURIComponent(allUris.toString());
         const response = await axios({
             method: "POST",
-            url: ` 	https://api.spotify.com/v1/playlists/${playlistid}/tracks`,
-            uris: alluris,
+            url: ` 	https://api.spotify.com/v1/playlists/${duplicateId}/tracks?uris=${uriInput}`,
             headers: {
-                Authorization: `Bearer ${access_token}`,
-                "Content-type": "application.json"
+                Authorization: `Bearer ${access_token}`
             }
         })
-        console.log(response) 
-        
+        return duplicateId; 
     } catch (err) {
         console.log(err.response)
     }
 
 }
 
-async function addSongsFirst(playlist_id, access_token) {
+async function addSongsFirst(playlistId, access_token) {
     try {
         const response = await axios({
             method: "get",
-            url: `https://api.spotify.com/v1/playlists/${playlist_id}/tracks?market=CA&fields=items(added_at%2Ctrack(name%2Cid%2Cartists(id)))`,
+            url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks?market=CA&fields=items(added_at%2Ctrack(name%2Cid%2Cartists(id)))`,
             headers: {
                 Authorization: `Bearer ${access_token}`
             }
@@ -234,26 +223,8 @@ async function nextFive(seedTracks, seedGenres, seedArtists, access_token) {
 };
 }
 
-async function updateSongs(client, playlistval) {
-    const addedsongs = await addSongsFirst(playlist_id, access_token)
-    result = await client.db("Playlists").collection("playlist")
-                        .updateMany({ playlist_id: playlistval }, { $set: { 
-                            on_off: true, 
-                            songs: addedsongs
-          
-                            }});
 
-    console.log(`${result.matchedCount} document(s) matched the query criteria.`);
-    console.log(`${result.modifiedCount} document(s) was/were updated.`); 
-    console.log(addedsongs)
-}
 
 module.exports = {
-    updateSongs,
-    createNewPlaylist,
-    returnOriginalTracks,
-    getUris,
-    addSongsFirst,
-    getGenres,
-    nextFive,
+    setUpPlaylist,
 };

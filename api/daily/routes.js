@@ -1,7 +1,4 @@
 const express = require('express');
-const { access } = require('fs');
-const { send } = require('process');
-const { getGenres, topFive } = require('../turnOn/utils');
 const { playlistsOn, checkPlaylistSongs, findNewSongInfo } = require('./utils');
 
 // get instance of router
@@ -11,7 +8,7 @@ router.get('/getOnPlaylists'), async (req, res) => {
     try {
         const { access_token } = req.query;
         const onPlaylists = playlistsOn(access_token);
-        res.status(200).send(onPLaylists);
+        res.status(200).send(onPlaylists);
     } catch (err) {
         res.status(400).send(err);
     }
@@ -39,3 +36,5 @@ router.get('/findNewSongInfo'), async (req, res) => {
         res.status(400).send(err);
     }
 }
+
+module.exports = router;
