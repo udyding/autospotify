@@ -18,7 +18,6 @@ async function setUpPlaylist(userId, playlistId, limit, access_token) {
         let playlistName = (await client.db("Playlists").collection("playlist")
             .find({ playlist_id: playlistId }, { fields: { _id: 0, playlist_name: 1 }}).toArray())[0].playlist_name
         await createNewPlaylist(userId, playlistId, playlistName, access_token)
-        console.log(addedSongs)
         return playlistId;
     } catch (e) {
         console.error(e);
@@ -184,7 +183,7 @@ async function nextFive(seedTracks, seedGenres, seedArtists, access_token) {
         try {
             const response = await axios({
                 method: "get",
-                url: `https://api.spotify.com/v1/recommendations?limit=5&market=CA&seed_artists=${seedArtists}&seed_genres=${seedGenres}&seed_tracks=${seedTracks}`,
+                url: `https://api.spotify.com/v1/recommendations?limit=15&market=CA&seed_artists=${seedArtists}&seed_genres=${seedGenres}&seed_tracks=${seedTracks}`,
                 headers: {
                     Authorization: `Bearer ${access_token}`
                 }
@@ -204,7 +203,7 @@ async function nextFive(seedTracks, seedGenres, seedArtists, access_token) {
         try {
             const response = await axios({
                 method: "get",
-                url: `https://api.spotify.com/v1/recommendations?limit=5&market=CA&seed_artists=${seedArtists}&seed_tracks=${seedTracks}`,
+                url: `https://api.spotify.com/v1/recommendations?limit=15&market=CA&seed_artists=${seedArtists}&seed_tracks=${seedTracks}`,
                 headers: {
                     Authorization: `Bearer ${access_token}`
                 }
@@ -227,4 +226,6 @@ async function nextFive(seedTracks, seedGenres, seedArtists, access_token) {
 
 module.exports = {
     setUpPlaylist,
+    getGenres,
+    nextFive,
 };
