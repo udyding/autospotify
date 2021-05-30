@@ -8,7 +8,7 @@ router.get("/createMultiplePlaylists", async (req, res) => {
     const { userId, access_token } = req.query;
     const playlists = await getPlaylist(userId, access_token);
 
-    const multiplePlaylists = await createMultiplePlaylists(playlists) //WORK ON THIS);
+    const multiplePlaylists = await createMultiplePlaylists(playlists);
     res.status(200).send(multiplePlaylists);
   } catch (err) {
     res.status(400).send(err);

@@ -21,10 +21,8 @@ async function setUpPlaylist(userId, playlistId, limit, access_token) {
         return playlistId;
     } catch (e) {
         console.error(e);
-    } finally {
-        await client.close();
-    }
-    }
+    } 
+}
 
 
 // duplicates the playlist that has just been turned on
@@ -111,31 +109,29 @@ async function addSongsFirst(playlistId, access_token) {
         for (let i = 0; i < numberOfSongs; i++) {
             item = items[i];
             let artistsItems = item.track.artists; 
-            let artistsId = [];
-            for (let j = 0; j < artistsItems.length; j++) {
-                artistsId.push(artistsItems[j].id);
-            }
-            let seedGenres = await getGenres(artistsId, access_token);
-            let firstGenresString = '';
-            if (seedGenres.length == 0) {
-                firstGenresString = 'none';
-            } else {
-                firstGenresString = seedGenres[0].toString();
-            }
+            let artistsId = (artistsItems[0].id).toString();
+            // for (let j = 0; j < artistsItems.length; j++) {
+            //     artistsId.push(artistsItems[j].id);
+            // }
+            // let seedGenres = await getGenres(artistsId, access_token);
+            // let firstGenresString = '';
+            // if (seedGenres.length == 0) {
+            //     firstGenresString = 'none';
+            // } else {
+            //     firstGenresString = seedGenres[0].toString();
+            // }
 
             let seedTrack = items[i].track.id;
-            let seedArtists = artistsId;
-            let firstArtistString = artistsId[0].toString();
-            let topFive = await nextFive(seedTrack, firstGenresString, firstArtistString, access_token);
+            let top5 = await next5(seedTrack, /*firstGenresString,*/ artistsId, access_token);
 
             let song = {
                 date_added: (items[i].added_at.split("T"))[0],
                 song_id: seedTrack, // this is also the seed_tracks
-                seed_artists: seedArtists, // all seeds are in string form
-                seed_genres: seedGenres, // this causes the program to run slower
+                first_artist: artistsId, // all seeds are in string form
+                //seed_genres: seedGenres, // this causes the program to run slower
                 is_original: true,
                 is_archived: false,
-                top_five: topFive
+                top_five: top5
             };
             songs.push(song);
         }
@@ -147,85 +143,56 @@ async function addSongsFirst(playlistId, access_token) {
     }
 }
 
-// get the first 5 recommended songs based on seeds
-async function getGenres(seed_artists, access_token) {
-    let numArtists = seed_artists.length;
-    let allGenres = [];
-    for (i = 0; i < numArtists; i++) {
-        try {
-            const response = await axios({
-                method: "get", 
-                url: `https://api.spotify.com/v1/artists/${seed_artists[i]}`,
-                headers: {
-                    Authorization: `Bearer ${access_token}`
-                }
-            });
-            let artistResponse = response.data;
-            let artistGenres = artistResponse.genres;
-            for (j = 0; j < artistGenres.length; j++) {
-                allGenres.push(artistGenres[j]);
+// gets the genres of a bunch of artists
+// async function getGenres(seed_artists, access_token) {
+//     let artistsURL = encodeURIComponent(seed_artists.join())
+//     let allGenres = [];
+//     try {
+//         const response = await axios({
+//             method: "get", 
+//             url: `https://api.spotify.com/v1/artists?ids=${artistsURL}`,
+//             headers: {
+//                 Authorization: `Bearer ${access_token}`
+//             }
+//         });
+//         let artistsInfo = response.data.artists;
+//         for (let artist in artistsInfo) {
+//             let artistGenres = artistsInfo[artist].genres;
+//             allGenres += allGenres.concat(artistGenres)
+//         }
+//         allGenres = allGenres.slice(0,5)
+//         return allGenres;
+//     } catch (err) {
+//         console.log(err.response);
+//     }
+// }
+
+async function next5(seedTracks, /*seedGenres,*/ seedArtists, access_token) {
+    // if you add genres, you need to check if genres is none or not
+    try {
+        const response = await axios({
+            method: "get",
+            url: `https://api.spotify.com/v1/recommendations?limit=5&market=CA&seed_artists=${seedArtists}&seed_tracks=${seedTracks}`,
+            headers: {
+                Authorization: `Bearer ${access_token}`
             }
-        } catch (err) {
-            console.log(err.response);
-        }
+        })
+        let allInfo = response.data;
+        let tracksOnly = allInfo.tracks;
+        let numTracks = tracksOnly.length;
+        let song_ids = [];
+        for (let i = 0; i < numTracks; i++) {
+            song_ids.push(tracksOnly[i].id);
+        };
+        return song_ids; // returns an array of all 5 song ids
+    } catch (err) {
+    console.log(err.response)
     }
-
-    let uniqueGenres = allGenres.reduce(function(a,b) {
-        if (a.indexOf(b) < 0) a.push(b);
-        return a;
-    }, []);
-    let topGenres = uniqueGenres.slice(0,5);
-    return topGenres;
 }
-
-async function nextFive(seedTracks, seedGenres, seedArtists, access_token) {
-    if (seedGenres != 'none') {
-        try {
-            const response = await axios({
-                method: "get",
-                url: `https://api.spotify.com/v1/recommendations?limit=15&market=CA&seed_artists=${seedArtists}&seed_genres=${seedGenres}&seed_tracks=${seedTracks}`,
-                headers: {
-                    Authorization: `Bearer ${access_token}`
-                }
-            })
-            let allInfo = response.data;
-            let tracksOnly = allInfo.tracks;
-            let numTracks = tracksOnly.length;
-            let song_ids = [];
-            for (let i = 0; i < numTracks; i++) {
-                song_ids.push(tracksOnly[i].id);
-            };
-            return song_ids; // returns an array of all 5 song ids
-        } catch (err) {
-        console.log(err.response)
-    }
-    } else {
-        try {
-            const response = await axios({
-                method: "get",
-                url: `https://api.spotify.com/v1/recommendations?limit=15&market=CA&seed_artists=${seedArtists}&seed_tracks=${seedTracks}`,
-                headers: {
-                    Authorization: `Bearer ${access_token}`
-                }
-            })
-            let allInfo = response.data;
-            let tracksOnly = allInfo.tracks;
-            let numTracks = tracksOnly.length;
-            let song_ids = [];
-            for (let i = 0; i < numTracks; i++) {
-                song_ids.push(tracksOnly[i].id);
-            };
-            return song_ids; // returns an array of all 5 song ids
-        } catch (err) {
-        console.log(err.response)
-    }   
-};
-}
-
 
 
 module.exports = {
     setUpPlaylist,
-    getGenres,
-    nextFive,
+    //getGenres,
+    next5,
 };
